@@ -23,15 +23,14 @@ var (
 	multiUnicode int
 )
 
-// My message to split
-// FullContent mandatory
+// Message - message to split
 type Message struct {
 	FullContent string
 	Charset     string
 	UDH         int
 }
 
-// My message splitted
+// Split - result of message splitted
 type Split struct {
 	Charset        string // GSM or Unicode
 	Length         int    // Total length of message
@@ -41,14 +40,14 @@ type Split struct {
 	RemainingChars int    // Remaining char in current SMS
 }
 
-// SMS parts contains in my message
+// SMS  - Parts contains in my message
 type Sms struct {
 	Content string
 	Bytes   int
 	Length  int
 }
 
-// Test if message is GSM 7 charset
+// IsGSM7 - Test if message is GSM 7 charset
 func IsGSM7(msg string) bool {
 	for _, c := range msg {
 		_, gsm7 := gsm7Chars[c]
@@ -65,7 +64,7 @@ func isGSM7Ext(c rune) bool {
 	return gsm7Ext
 }
 
-// Test if message is Unicode charset
+// IsUnicode - Test if message is Unicode charset
 func IsUnicode(msg string) bool {
 	return !IsGSM7(msg)
 }
