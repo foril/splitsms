@@ -1,4 +1,5 @@
 # splitsms
+[![Build Status](https://travis-ci.org/foril/splitsms.svg?branch=master)](https://travis-ci.org/foril/splitsms) [![Go Report Card](https://goreportcard.com/badge/github.com/foril/splitsms)](https://goreportcard.com/report/github.com/foril/splitsms)
 
 Go library for split SMS.
 
