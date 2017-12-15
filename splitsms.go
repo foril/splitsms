@@ -157,9 +157,6 @@ func (m *Message) Split() (*Split, error) {
 	}
 
 	split.appendSms(curSMS, bytes, length)
-	bytes = 0
-	length = 0
-	curSMS = ""
 
 	if (isGsm && len(split.Parts) > 1 && split.Bytes <= singleGsm7) || (!isGsm && len(split.Parts) > 1 && split.Bytes <= (singleUnicode*2)) {
 		split.Parts[0].Content += split.Parts[1].Content
