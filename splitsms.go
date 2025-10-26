@@ -18,11 +18,6 @@ const (
 	singleUnicode int = 70
 )
 
-var (
-	multiGSM7    int
-	multiUnicode int
-)
-
 // Message - message to split
 type Message struct {
 	FullContent string
@@ -90,6 +85,8 @@ func (m *Message) Split() (*Split, error) {
 		isGsm = IsGSM7(msg)
 	}
 
+	// Calculate multi-part SMS limits based on UDH size (thread-safe local variables)
+	var multiGSM7, multiUnicode int
 	if m.UDH == 7 {
 		multiGSM7 = ((smsBytes * 8) - (m.UDH * 8)) / 7
 		multiUnicode = ((smsBytes * 8) - (m.UDH * 8)) / 16
@@ -112,7 +109,7 @@ func (m *Message) Split() (*Split, error) {
 			if isGSM7Ext(char) {
 
 				if bytes == multiGSM7-1 {
-					split.appendSms(curSMS, bytes, length)
+					split.appendSms(curSMS, bytes, length, isGsm, multiGSM7, multiUnicode)
 					bytes = 0
 					length = 0
 					curSMS = ""
@@ -131,7 +128,7 @@ func (m *Message) Split() (*Split, error) {
 			if isHighSurrogate(char) {
 
 				if bytes == (multiUnicode-1)*2 {
-					split.appendSms(curSMS, bytes, length)
+					split.appendSms(curSMS, bytes, length, isGsm, multiGSM7, multiUnicode)
 					bytes = 0
 					length = 0
 					curSMS = ""
@@ -148,14 +145,14 @@ func (m *Message) Split() (*Split, error) {
 		curSMS += string(char)
 
 		if (isGsm && bytes == multiGSM7) || (!isGsm && bytes == (multiUnicode*2)) {
-			split.appendSms(curSMS, bytes, length)
+			split.appendSms(curSMS, bytes, length, isGsm, multiGSM7, multiUnicode)
 			bytes = 0
 			length = 0
 			curSMS = ""
 		}
 	}
 
-	split.appendSms(curSMS, bytes, length)
+	split.appendSms(curSMS, bytes, length, isGsm, multiGSM7, multiUnicode)
 
 	if (isGsm && len(split.Parts) > 1 && split.Bytes <= singleGsm7) || (!isGsm && len(split.Parts) > 1 && split.Bytes <= (singleUnicode*2)) {
 		split.Parts[0].Content += split.Parts[1].Content
@@ -174,7 +171,7 @@ func (m *Message) Split() (*Split, error) {
 	return split, nil
 }
 
-func (m *Split) appendSms(sms string, bytes int, length int) {
+func (m *Split) appendSms(sms string, bytes int, length int, isGsm bool, multiGSM7 int, multiUnicode int) {
 
 	if bytes > 0 {
 		m.Parts = append(m.Parts, Sms{sms, bytes, length})
@@ -182,7 +179,7 @@ func (m *Split) appendSms(sms string, bytes int, length int) {
 		m.Bytes += bytes
 		m.CountParts = len(m.Parts)
 
-		if m.Charset == "GSM" {
+		if isGsm {
 			m.RemainingChars = singleGsm7 - m.Bytes
 			if len(m.Parts) > 1 {
 				m.RemainingChars = multiGSM7 - m.Parts[len(m.Parts)-1].Bytes
