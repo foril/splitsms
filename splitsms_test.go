@@ -8,7 +8,7 @@ import (
 // Unicode charset detected
 func TestIsGSM7(t *testing.T) {
 
-	var sms string = "\n\f\r !\\#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_abcdefghijklmnopqrstuvwxyz{|}~¡£¤¥§¿ÄÅÆÇÉÑÖØÜßàäåæèéìñòöøùüΓΔΘΛΞΠΣΦΨΩ€\f[\\]^{|}~€ê"
+	sms := "\n\f\r !\\#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_abcdefghijklmnopqrstuvwxyz{|}~¡£¤¥§¿ÄÅÆÇÉÑÖØÜßàäåæèéìñòöøùüΓΔΘΛΞΠΣΦΨΩ€\f[\\]^{|}~€ê"
 	if IsGSM7(sms) {
 		t.Error("Charset SMS is Unicode")
 	}
@@ -17,7 +17,7 @@ func TestIsGSM7(t *testing.T) {
 // GSM charset detected
 func TestIsUnicode(t *testing.T) {
 
-	var sms string = "\n\f\r !\\#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_abcdefghijklmnopqrstuvwxyz{|}~¡£¤¥§¿ÄÅÆÇÉÑÖØÜßàäåæèéìñòöøùüΓΔΘΛΞΠΣΦΨΩ€\f[\\]^{|}~€"
+	sms := "\n\f\r !\\#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_abcdefghijklmnopqrstuvwxyz{|}~¡£¤¥§¿ÄÅÆÇÉÑÖØÜßàäåæèéìñòöøùüΓΔΘΛΞΠΣΦΨΩ€\f[\\]^{|}~€"
 	if IsUnicode(sms) {
 		t.Error("Charset SMS is GSM 7")
 	}
@@ -27,7 +27,7 @@ func TestIsUnicode(t *testing.T) {
 func TestSplitGSM(t *testing.T) {
 
 	// 160 characters , 0 remaining
-	var msg Message = Message{FullContent: "----------------------------------------------------------------------------------------------------------------------------------------------------------------"}
+	msg := Message{FullContent: "----------------------------------------------------------------------------------------------------------------------------------------------------------------"}
 	split, _ := msg.Split()
 
 	if split.Length != 160 || split.RemainingChars != 0 {
@@ -72,7 +72,7 @@ func TestSplitGSM(t *testing.T) {
 func TestSplitUnicode(t *testing.T) {
 
 	// 70 characters , 0 remaining
-	var msg Message = Message{FullContent: "°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°"}
+	msg := Message{FullContent: "°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°"}
 	split, _ := msg.Split()
 
 	if split.Length != 70 || split.RemainingChars != 0 {
@@ -116,8 +116,8 @@ func TestSplitUnicode(t *testing.T) {
 func TestForcesCharset(t *testing.T) {
 
 	// 70 GSM characters forced in Unicode , 0 remaining
-	var msg Message = Message{FullContent: "---------------------------------------------------------------------€", Charset: "Unicode"}
-	split, err := msg.Split()
+	msg := Message{FullContent: "---------------------------------------------------------------------€", Charset: "Unicode"}
+	split, _ := msg.Split()
 
 	if split.Length != 70 || split.RemainingChars != 0 || split.Charset != "Unicode" {
 		t.Errorf("This message contain %d characters and %d characters remaining, charset : %s", split.Length, split.RemainingChars, split.Charset)
@@ -133,7 +133,7 @@ func TestForcesCharset(t *testing.T) {
 
 	// Charset not supported
 	msg = Message{FullContent: "°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°", Charset: "XXXX"}
-	_, err = msg.Split()
+	_, err := msg.Split()
 
 	if err == nil {
 		t.Error("Charset not supported : accepted GSM or Unicode")
@@ -143,7 +143,7 @@ func TestForcesCharset(t *testing.T) {
 func TestUDH7(t *testing.T) {
 
 	// 306 chars on 3 SMS  - UDH 7 bytes
-	var msg Message = Message{FullContent: "------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------", UDH: 7}
+	msg := Message{FullContent: "------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------", UDH: 7}
 	split, _ := msg.Split()
 
 	if split.Length != 306 || split.CountParts != 3 {

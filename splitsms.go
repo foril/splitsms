@@ -73,7 +73,7 @@ func (m *Message) Split() (*Split, error) {
 	msg := m.FullContent
 
 	if m.Charset != "" && m.Charset != "GSM" && m.Charset != "Unicode" {
-		return nil, errors.New("Charset not supported - GSM or Unicode")
+		return nil, errors.New("charset not supported - GSM or Unicode")
 	}
 
 	if m.UDH != 0 && (m.UDH != 6 && m.UDH != 7) {
