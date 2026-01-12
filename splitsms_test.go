@@ -1,6 +1,7 @@
 package splitsms
 
 import (
+	"sync"
 	"testing"
 )
 
@@ -156,4 +157,132 @@ func TestUDH7(t *testing.T) {
 	if split.Length != 134 || split.CountParts != 3 {
 		t.Errorf("This message contain %d characters on %d parts", split.Length, split.CountParts)
 	}
+}
+
+// TestConcurrentSplitDifferentUDH tests thread safety with different UDH values
+func TestConcurrentSplitDifferentUDH(t *testing.T) {
+	const goroutines = 100
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	errors := make(chan error, goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func(idx int) {
+			defer wg.Done()
+
+			var msg Message
+			var expectedParts int
+
+			if idx%2 == 0 {
+				// UDH 6 bytes: 306 chars = 2 SMS
+				msg = Message{FullContent: "------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------", UDH: 6}
+				expectedParts = 2
+			} else {
+				// UDH 7 bytes: 306 chars = 3 SMS
+				msg = Message{FullContent: "------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------", UDH: 7}
+				expectedParts = 3
+			}
+
+			split, err := msg.Split()
+			if err != nil {
+				errors <- err
+				return
+			}
+
+			if split.CountParts != expectedParts {
+				t.Errorf("UDH=%d: expected %d parts, got %d", msg.UDH, expectedParts, split.CountParts)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		t.Errorf("Concurrent split error: %v", err)
+	}
+}
+
+// TestConcurrentSplitMixedCharsets tests thread safety with GSM and Unicode in parallel
+func TestConcurrentSplitMixedCharsets(t *testing.T) {
+	const goroutines = 100
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func(idx int) {
+			defer wg.Done()
+
+			var msg Message
+			var expectedCharset string
+
+			if idx%2 == 0 {
+				// GSM message
+				msg = Message{FullContent: "----------------------------------------------------------------------------------------------------------------------------------------------------------------"}
+				expectedCharset = "GSM"
+			} else {
+				// Unicode message
+				msg = Message{FullContent: "°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°"}
+				expectedCharset = "Unicode"
+			}
+
+			split, err := msg.Split()
+			if err != nil {
+				t.Errorf("Split error: %v", err)
+				return
+			}
+
+			if split.Charset != expectedCharset {
+				t.Errorf("Expected charset %s, got %s", expectedCharset, split.Charset)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+}
+
+// TestConcurrentSplitStress stress test with many concurrent calls
+func TestConcurrentSplitStress(t *testing.T) {
+	const goroutines = 500
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	messages := []struct {
+		msg            Message
+		expectedLength int
+		expectedParts  int
+	}{
+		{Message{FullContent: "Hello World"}, 11, 1},
+		{Message{FullContent: "----------------------------------------------------------------------------------------------------------------------------------------------------------------"}, 160, 1},
+		{Message{FullContent: "-----------------------------------------------------------------------------------------------------------------------------------------------------------------"}, 161, 2},
+		{Message{FullContent: "°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°"}, 70, 1},
+		{Message{FullContent: "°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°"}, 71, 2},
+	}
+
+	for i := 0; i < goroutines; i++ {
+		go func(idx int) {
+			defer wg.Done()
+
+			tc := messages[idx%len(messages)]
+			split, err := tc.msg.Split()
+			if err != nil {
+				t.Errorf("Split error: %v", err)
+				return
+			}
+
+			if split.Length != tc.expectedLength {
+				t.Errorf("Expected length %d, got %d", tc.expectedLength, split.Length)
+			}
+
+			if split.CountParts != tc.expectedParts {
+				t.Errorf("Expected %d parts, got %d", tc.expectedParts, split.CountParts)
+			}
+		}(i)
+	}
+
+	wg.Wait()
 }
